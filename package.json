@@ -12,7 +12,8 @@
     "test": "vitest run",
     "data:fetch": "node scripts/fetch-sources.mjs",
     "data:refresh": "node scripts/fetch-sources.mjs --refresh && node scripts/build-data.mjs",
-    "data:build": "node scripts/build-data.mjs"
+    "data:build": "node scripts/build-data.mjs",
+    "deploy": "node scripts/deploy-pages.mjs"
   },
   "dependencies": {
     "leaflet": "1.9.4"

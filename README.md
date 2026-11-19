@@ -7,6 +7,8 @@ Un mode **post-bac** (Parcoursup) est aussi disponible.
 L’application calcule pour chaque formation un **taux de compatibilité** à partir de 13 critères, dont l’étudiant règle
 lui-même l’importance. Chaque note est expliquée et sourcée.
 
+**Site en ligne : https://rami5090.github.io/cap-sup/**
+
 ## Fonctionnalités
 
 - Questionnaire en 6 étapes : parcours, matières et compétences, projet, vie pratique, budget, priorités.
@@ -66,6 +68,16 @@ Les données préparées sont déjà dans `public/data/`. Pour les mettre à jou
 ```bash
 npm run data:refresh   # télécharge les jeux de données dans data-raw/ puis reconstruit public/data/
 ```
+
+## Mettre le site à jour
+
+Le site est servi par GitHub Pages depuis la branche `gh-pages`. Après une modification :
+
+```bash
+npm run deploy   # construit l’application et publie dist/ sur la branche gh-pages
+```
+
+Le site se met à jour en une à deux minutes. L’envoi utilise GitHub CLI s’il est connecté, sinon les identifiants Git habituels.
 
 ## Technologies
 
