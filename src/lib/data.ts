@@ -23,7 +23,7 @@ let licencesCache: Promise<LicenceMention[]> | null = null;
 let crousCache: Promise<[number, number, string, string, string][]> | null = null;
 
 async function getJSON<T>(file: string): Promise<T> {
-  const res = await fetch(`./data/${file}`);
+  const res = await fetch(`./data/${file}?v=${__DATA_VERSION__}`);
   if (!res.ok) throw new Error(`Impossible de charger ${file} (${res.status})`);
   return (await res.json()) as T;
 }
