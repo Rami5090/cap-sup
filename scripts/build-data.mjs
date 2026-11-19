@@ -259,6 +259,7 @@ for (const [key, arr] of onisepCostByUaiType) {
   if (type === 'master' && (uaiInfo.get(uai)?.statut ?? 0) >= 1) privateMasterCosts.push(median(arr));
 }
 const PRIVATE_MASTER_MEDIAN = median(privateMasterCosts) ?? 6000;
+const PRIVATE_NAME = /catholique|facult[ée]s libres|institut libre|junia|commerce et management/i;
 
 function buildMasters(tables) {
   const rows = [];
@@ -284,7 +285,8 @@ function buildMasters(tables) {
     const mods = Array.isArray(r.modalite_enseignement) ? r.modalite_enseignement : [r.modalite_enseignement].filter(Boolean);
     const alt = mods.includes('APPRENTISSAGE') || mods.includes('CONTRAT_PRO') || r.alternance === '1';
     const alternance = alt ? (mods.includes('INITIALE') ? 1 : 2) : 0;
-    const statut = u?.statut ?? 0;
+    // Statut ONISEP du lieu ; à défaut, établissements privés reconnaissables à leur nom (instituts catholiques…).
+    const statut = u?.statut ?? (PRIVATE_NAME.test(r.eta_nom ?? '') ? 2 : 0);
     let fee = FEES.master;
     let feeSrc = 'o';
     if (statut >= 1) {
