@@ -1,28 +1,35 @@
-// Données chargées (formations, références) partagées entre les vues.
-import { loadLicences, loadMeta, loadOffers, type LicenceMention, type Meta } from './data';
-import type { ScoringContext } from './scoring';
+// Données chargées (formations, références, métiers) partagées entre les vues.
+import { loadLicences, loadMeta, loadMetiers, loadOffers, type LicenceMention, type Meta } from './data';
+import { buildJobsIndex, type JobsIndex } from './jobs';
+import { computeIdf, type ScoringContext } from './scoring';
 import type { Level, Offer } from './types';
 
 class DataStore {
   meta = $state.raw<Meta | null>(null);
   licences = $state.raw<LicenceMention[]>([]);
+  jobs = $state.raw<JobsIndex | null>(null);
   offers = $state.raw<Offer[]>([]);
   level = $state<Level | null>(null);
   loading = $state(false);
   error = $state<string | null>(null);
 
+  /** Poids des mots (rareté parmi les formations du niveau chargé), pour le critère « thématique ». */
+  idf = $derived(computeIdf(this.offers));
   ctx: ScoringContext = $derived({
     licenceToMasters: new Map(this.licences.map((l) => [l.key, new Set(l.masters)])),
-    medianRentM2: this.meta?.refs.rentM2?.[2] ?? 17.2
+    medianRentM2: this.meta?.refs.rentM2?.[2] ?? 17.2,
+    jobs: this.jobs ?? undefined,
+    idf: this.idf
   });
   byId = $derived(new Map(this.offers.map((o) => [o.id, o])));
 
   async init() {
-    if (this.meta) return;
+    if (this.meta && this.jobs) return;
     try {
-      const [m, l] = await Promise.all([loadMeta(), loadLicences()]);
+      const [m, l, j] = await Promise.all([loadMeta(), loadLicences(), loadMetiers()]);
       this.meta = m;
       this.licences = l;
+      this.jobs = buildJobsIndex(j);
     } catch (e) {
       this.error = (e as Error).message;
     }

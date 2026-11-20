@@ -19,6 +19,10 @@
   const HOW: Record<string, string> = {
     interet: 'Passion = 100, intérêt = 75. Un domaine voisin de tes intérêts obtient 25, un domaine sans lien 5.',
     format: '60 % pour le type de formation (100 s’il fait partie de tes choix, 35 sinon, 80 si tu n’as rien choisi) et 40 % pour l’alternance selon ta préférence.',
+    thematique: 'Mots de ton projet de formation, de ton sujet actuel et de tes missions retrouvés dans l’intitulé, le parcours et les mots-clés de la formation (Trouver mon master, sous-domaines ONISEP). Les mots rares pèsent plus que les mots courants. Aucun mot en commun = 15 ; la moitié des mots (pondérés) = 100. Non concerné si tu n’as rien décrit.',
+    entreprise: 'Non concerné si tu n’es pas en alternance avec une entreprise qui peut te garder. Sinon : 10 si la formation ne propose pas l’alternance ; avec alternance, 100 jusqu’à 30 km de ton entreprise, 70 à 80 km, 40 à 200 km ; + 10 si la formation mène à des métiers du secteur de ton entreprise.',
+    metiers: '100 si la formation fait partie des formations qui mènent à un métier que tu vises (fiches métiers ONISEP) ; 75 si elle mène à des métiers des secteurs choisis ; 55 si sa thématique est proche d’un métier visé ; 35 si même domaine ; 5 sinon. Non concerné si tu n’as choisi ni métier ni secteur.',
+    enjeux: 'Moyenne des enjeux choisis : emploi (taux d’emploi à 18 mois), salaire (salaire médian, sinon ordre de grandeur par type de diplôme), stabilité (emplois stables), international, entrepreneuriat, service public, recherche et impact (mots-clés, domaines, statuts des métiers accessibles), alternance, équilibre (ratio énergie / charge) et proximité (trajet).',
     parcours: 'Bac+3 vers master : 100 si ta mention de licence figure dans la liste officielle des licences compatibles avec la mention de master. Sinon, de 20 à 85 selon la proximité des domaines, avec un ajustement selon la part d’admis 2025 venant du même type de diplôme que toi. Post-bac : part des admis ayant le même type de bac.',
     admission: 'Taux de proposition observé pour ton origine (L3, licence pro, BUT… dans Mon Master 2025) ou taux d’accès Parcoursup, modulé selon ta position estimée (moyenne et classement). La probabilité obtenue est convertie en note : 50 % de chances ≈ 67/100.',
     matieres: 'Moyenne de tes notes dans les matières clés du domaine, comparée au niveau attendu (déduit de la sélectivité ou des mentions des admis). Égalité = 70 ; chaque point d’écart vaut 12 points de note.',
@@ -45,7 +49,7 @@
 
   <section class="card formula">
     <h2>Le taux de compatibilité</h2>
-    <p>Chaque formation reçoit une note de 0 à 100 sur 13 critères. Le taux est leur moyenne pondérée par l’importance que tu donnes à chacun (de 0 à 5) :</p>
+    <p>Chaque formation reçoit une note de 0 à 100 sur 17 critères. Le taux est leur moyenne pondérée par l’importance que tu donnes à chacun (de 0 à 5) :</p>
     <p class="eq">Taux = Σ (importance × note) ÷ Σ importance</p>
     <p class="muted small">
       Un critère « non concerné » (par exemple le coût du logement quand tu restes chez toi) est retiré du calcul : il ne

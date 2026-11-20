@@ -110,6 +110,33 @@ export const SOURCES = [
     licence: 'Licence Ouverte v2.0 (Etalab)'
   },
   {
+    key: 'tmm',
+    file: 'tmm-parcours-2021.json',
+    url: `${ESR}/fr-esr-tmm-donnees-du-portail-dinformation-trouver-mon-master-parcours-de-format/exports/json?where=${q('annee="2021"')}&select=${q('for_inm,parc_inmp,for_mc_disciplinaire,for_mc_sectoriel,for_mc_metier')}`,
+    label: 'Trouver mon master : mots-clés disciplinaires, sectoriels et métiers des mentions de master',
+    producer: 'Ministère de l’Enseignement supérieur',
+    page: 'https://data.enseignementsup-recherche.gouv.fr/explore/dataset/fr-esr-tmm-donnees-du-portail-dinformation-trouver-mon-master-parcours-de-format/',
+    licence: 'Licence Ouverte (Etalab)'
+  },
+  {
+    key: 'metiersCsv',
+    file: 'onisep-ideo-metiers.csv',
+    url: 'https://data.onisep.fr/api/v1/downloads/5fa5949243f97/5fa5949243f97.csv',
+    label: 'Idéo-Métiers : métiers, domaines et sous-domaines, codes ROME',
+    producer: 'ONISEP',
+    page: 'https://opendata.onisep.fr/',
+    licence: 'Licence Ouverte (Etalab)'
+  },
+  {
+    key: 'fichesMetiers',
+    file: 'onisep-fiches-metiers.zip',
+    url: 'https://data.onisep.fr/api/v1/downloads/5fe0808a2da6f/5fe0808a2da6f.zip',
+    label: 'Idéo-Fiches métiers : secteurs, niveau d’accès, statuts et formations menant à chaque métier',
+    producer: 'ONISEP',
+    page: 'https://opendata.onisep.fr/',
+    licence: 'ODbL'
+  },
+  {
     key: 'communes',
     file: 'communes.json',
     url: 'https://geo.api.gouv.fr/communes?type=commune-actuelle,arrondissement-municipal&fields=nom,code,codeDepartement,centre,population&format=json',

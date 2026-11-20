@@ -1,9 +1,10 @@
 // Filtrage et classement des formations.
 import { haversineKm } from './geo';
+import { sectorDomains, type JobsIndex } from './jobs';
 import { assess, combine, type Assessment, type ScoringContext } from './scoring';
 import type { Filters } from './state.svelte';
 import { norm } from './text';
-import type { Offer, Profile, Weights } from './types';
+import type { DomainId, Offer, Profile, Weights } from './types';
 
 export interface Ranked {
   a: Assessment;
@@ -30,10 +31,29 @@ function searchText(o: Offer): string {
   return s;
 }
 
+/**
+ * Domaines retenus pour le filtre : centres d'intérêt, domaines des métiers visés et des secteurs choisis.
+ * Les formations qui mènent directement à un métier visé sont toujours gardées.
+ */
+export function focusDomains(p: Profile, jobs?: JobsIndex): { domains: Set<DomainId>; directFors: Set<number> } {
+  const domains = new Set<DomainId>(Object.entries(p.interests).filter(([, v]) => v).map(([k]) => k as DomainId));
+  const directFors = new Set<number>();
+  if (jobs) {
+    for (const id of p.metiers) {
+      const m = jobs.byId.get(id);
+      m?.domains.forEach((d) => domains.add(d));
+      m?.fors.forEach((f) => directFors.add(f));
+    }
+    for (const s of p.sectors) sectorDomains(jobs.sectors[s] ?? '').forEach((d) => domains.add(d));
+  }
+  return { domains, directFors };
+}
+
 /** Filtres « durs » appliqués avant le calcul (rayon, type, statut, alternance, domaines, recherche). */
-export function prefilter(offers: Offer[], p: Profile, f: Filters): Offer[] {
+export function prefilter(offers: Offer[], p: Profile, f: Filters, jobs?: JobsIndex): Offer[] {
   const tokens = norm(f.query).split(' ').filter(Boolean);
-  const interests = Object.entries(p.interests).filter(([, v]) => v).map(([k]) => k);
+  const { domains, directFors } = focusDomains(p, jobs);
+  const useDomains = !f.allDomains && domains.size > 0;
   const useRadius = !!p.home && p.maxDistanceKm > 0;
   const alternanceOnly = f.alternanceOnly || p.alternance === 'uniquement';
   return offers.filter((o) => {
@@ -41,7 +61,7 @@ export function prefilter(offers: Offer[], p: Profile, f: Filters): Offer[] {
     if (f.types.length && !f.types.includes(o.ty)) return false;
     if (f.publicOnly && (o.st ?? 0) !== 0) return false;
     if (alternanceOnly && !((o.al ?? 0) >= 1)) return false;
-    if (!f.allDomains && interests.length && !o.dm.some((d) => interests.includes(d))) return false;
+    if (useDomains && !o.dm.some((d) => domains.has(d)) && !(o.fo && directFors.has(o.fo))) return false;
     if (tokens.length) {
       const hay = searchText(o);
       if (!tokens.every((t) => hay.includes(t))) return false;

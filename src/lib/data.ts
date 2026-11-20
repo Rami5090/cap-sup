@@ -1,5 +1,5 @@
 // Chargement et décodage des données préparées par scripts/build-data.mjs.
-import type { Commune, DomainId, Level, Offer, OfferDataset, RawOffer } from './types';
+import type { Commune, DomainId, Level, MetiersDataset, Offer, OfferDataset, RawOffer } from './types';
 
 export interface Meta {
   generatedAt: string;
@@ -57,6 +57,7 @@ export function decodeDataset(ds: OfferDataset): Offer[] {
       lat: o.la ?? commune.lat,
       lon: o.lo ?? commune.lon,
       sector: o.sec != null ? ds.sectors[o.sec] : undefined,
+      keywords: o.ki != null ? ds.keywords?.[o.ki] : undefined,
       ...offerLink(o, uai)
     };
   });
@@ -79,6 +80,12 @@ export function loadMeta(): Promise<Meta> {
 export function loadLicences(): Promise<LicenceMention[]> {
   licencesCache ??= getJSON<LicenceMention[]>('licence-master.json');
   return licencesCache;
+}
+
+let metiersCache: Promise<MetiersDataset> | null = null;
+export function loadMetiers(): Promise<MetiersDataset> {
+  metiersCache ??= getJSON<MetiersDataset>('metiers.json');
+  return metiersCache;
 }
 
 export function loadCrous() {

@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { num, parseCSV, toObjects } from './lib/csv.mjs';
 import { classifyMaster, classifyText, domainsFromOnisep } from './lib/domains.mjs';
 import { CommuneIndex, depFromPostalCode, haversineKm, parentCommune } from './lib/geo.mjs';
+import { domainsByMetier, keywordsByMention, masterForTable, parseFichesMetiers } from './lib/metiers.mjs';
 import { capitalize, norm, sentenceCase } from './lib/text.mjs';
+import { unzip } from './lib/unzip.mjs';
 import { SOURCES } from './sources.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,6 +113,18 @@ for (const r of onisep) {
 }
 console.log(`ONISEP : ${onisep.length} actions de formation, ${uaiInfo.size} lieux`);
 
+// ---------------------------------------------------------------- 6 bis. Métiers ONISEP et mots-clés des masters
+const fichesXml = unzip(await readFile(join(RAW, 'onisep-fiches-metiers.zip'))).find((f) => f.name.endsWith('.xml'));
+const metiers = parseFichesMetiers(fichesXml.data.toString('utf8'));
+const metierDomains = domainsByMetier(toObjects(parseCSV(await readText('onisep-ideo-metiers.csv'), ';')));
+const masterFor = masterForTable(metiers, onisep);
+const tmmKeywords = keywordsByMention(await readJSON('tmm-parcours-2021.json'));
+const forFromUrl = (url) => Number((String(url ?? '').match(/FOR\.(\d+)/) ?? [])[1]) || null;
+/** Sous-domaines ONISEP d'une action de formation (« mécanique/aéronautique » → « aéronautique »). */
+const subDomains = (indexation) =>
+  [...new Set(String(indexation ?? '').split('|').map((p) => p.split('/')[1]?.trim()).filter(Boolean))].join(', ');
+console.log(`Métiers ONISEP : ${metiers.length} ; mentions de master reliées : ${masterFor.size} ; mots-clés TMM : ${tmmKeywords.size} mentions`);
+
 // ---------------------------------------------------------------- 7. InserSup
 const insersup = await readJSON('insersup.json');
 const INS_KIND = {
@@ -182,6 +196,8 @@ function createTables() {
   const etabIdx = new Map();
   const sectors = [];
   const sectorIdx = new Map();
+  const keywords = [];
+  const keywordIdx = new Map();
   return {
     commune(c) {
       if (communeIdx.has(c.code)) return communeIdx.get(c.code);
@@ -212,9 +228,15 @@ function createTables() {
       if (!sectorIdx.has(label)) { sectorIdx.set(label, sectors.length); sectors.push(label); }
       return sectorIdx.get(label);
     },
+    keyword(text) {
+      if (!text) return null;
+      if (!keywordIdx.has(text)) { keywordIdx.set(text, keywords.length); keywords.push(text); }
+      return keywordIdx.get(text);
+    },
     communes,
     etabs,
-    sectors
+    sectors,
+    keywords
   };
 }
 
@@ -318,6 +340,8 @@ function buildMasters(tables) {
         ao: clean({ l3: rate('lg3'), lp: rate('lp3'), but: rate('but3'), m: rate('master'), au: rate('autre') }),
         ad: clean({ l3: round(r.pct_accept_lg3), lp: round(r.pct_accept_lp3), but: round(r.pct_accept_but3), m: round(r.pct_accept_master), au: round(r.pct_accept_autre) }),
         in: insertion(isMeef ? 'MEEF' : 'M', r.eta_uai, r.mention) ?? (isMeef ? insertion('MEEF', 'FR', 'all') : null),
+        fo: masterFor.lookup(r.mention),
+        ki: tables.keyword(tmmKeywords.get(r.inm))
       })
     );
   }
@@ -425,7 +449,9 @@ function buildOnisep(tables, level) {
         in: ins,
         ur: r['AF page web'] && r['AF page web'] !== r['FOR URL et ID Onisep'] ? r['AF page web'] : null,
         uo: r['FOR URL et ID Onisep'],
-        hb
+        hb,
+        fo: forFromUrl(r['FOR URL et ID Onisep']),
+        ki: tables.keyword(subDomains(r['FOR indexation domaine web Onisep']))
       });
     seen.set(dupKey, offer);
     rows.push(offer);
@@ -532,7 +558,7 @@ async function writeLevel(file, build) {
   const tables = createTables();
   const offers = build(tables);
   const medians = fillPrivateCosts(offers);
-  const payload = { v: 1, etabs: tables.etabs, communes: tables.communes, sectors: tables.sectors, offers };
+  const payload = { v: 2, etabs: tables.etabs, communes: tables.communes, sectors: tables.sectors, keywords: tables.keywords, offers };
   const json = JSON.stringify(payload);
   await writeFile(join(OUT, file), json);
   console.log(`→ ${file} : ${offers.length} offres, ${tables.communes.length} communes, ${(json.length / 1e6).toFixed(2)} Mo`);
@@ -577,5 +603,35 @@ const licences = [...compat.values()]
   .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 await writeFile(join(OUT, 'licence-master.json'), JSON.stringify(licences));
 await writeFile(join(OUT, 'crous.json'), JSON.stringify(crous.map((r) => [round(r.lat, 5), round(r.lon, 5), r.nom, r.zone, r.url])));
+
+// Métiers : secteurs, niveau d'accès, statuts, domaines et formations (seulement celles présentes dans les offres).
+const offerFors = new Set([...bac3.offers, ...bac2.offers].map((o) => o.fo).filter(Boolean));
+const sectorList = [...new Set(metiers.flatMap((m) => m.sectors))].sort((a, b) => a.localeCompare(b, 'fr'));
+const statutList = [...new Set(metiers.flatMap((m) => m.statuts))];
+const metiersPayload = {
+  v: 1,
+  sectors: sectorList,
+  statuts: statutList,
+  metiers: metiers
+    .map((m) => [
+      m.id,
+      m.name,
+      m.synonyms.join('|'),
+      m.sectors.map((s) => sectorList.indexOf(s)),
+      m.level,
+      m.statuts.map((s) => statutList.indexOf(s)),
+      metierDomains.get(m.id) ?? [],
+      m.fors.filter((f) => offerFors.has(f)),
+      m.accroche
+    ])
+    .sort((a, b) => a[1].localeCompare(b[1], 'fr'))
+};
+const metiersJson = JSON.stringify(metiersPayload);
+await writeFile(join(OUT, 'metiers.json'), metiersJson);
+const linked = (offers) => offers.filter((o) => o.fo && metiers.some((m) => m.fors.includes(o.fo))).length;
+console.log(
+  `→ metiers.json : ${metiers.length} métiers, ${sectorList.length} secteurs, ${(metiersJson.length / 1e6).toFixed(2)} Mo ; ` +
+    `offres reliées à un métier : bac+3 ${linked(bac3.offers)}/${bac3.offers.length}, bac+2 ${linked(bac2.offers)}/${bac2.offers.length}`
+);
 
 console.log('\nRésumé :', JSON.stringify(meta.counts), '\nQualité :', JSON.stringify(meta.quality), '\nRéférences :', JSON.stringify(meta.refs));

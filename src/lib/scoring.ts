@@ -1,6 +1,6 @@
-// Moteur de compatibilité : 13 sous-scores (0-100) indépendants des pondérations, puis moyenne pondérée.
+// Moteur de compatibilité : 17 sous-scores (0-100) indépendants des pondérations, puis moyenne pondérée.
 // Un sous-score « null » signifie « non concerné » : il est exclu de la moyenne (ex. coût du logement si
-// l'étudiant reste chez ses parents).
+// l'étudiant reste chez ses parents, continuité avec l'entreprise s'il n'est pas en alternance).
 import {
   ALTERNANCE_LOAD, BOURSES, CO2_PER_KM, COLOC_FACTOR, CROUS_RENT, DETOUR, FEES, PENIBILITE, SMIC_BRUT, SPEED,
   STUDIO_M2, TRANSPORT_LABELS, TYPES, apprenticePct, commuteCostMonth
@@ -11,10 +11,12 @@ import {
 } from './domains';
 import { fmt1, fmtDuration, fmtEuro, fmtInt, fmtKm, fmtPct } from './format';
 import { haversineKm } from './geo';
-import { norm } from './text';
+import { GOAL_BY_ID, sectorDomains, type JobsIndex } from './jobs';
+import { isAlternant } from './profile';
+import { norm, stemLabels, stems } from './text';
 import type {
-  Budget, CriterionId, CriterionScore, Diploma, DomainId, Evaluation, Mobility, Offer, Profile, SkillId, SubjectId,
-  TransportMode, Weights
+  Budget, CriterionId, CriterionScore, Diploma, DomainId, Evaluation, GoalId, Metier, Mobility, Offer, Profile, SkillId,
+  SubjectId, TransportMode, Weights
 } from './types';
 
 export interface ScoringContext {
@@ -22,6 +24,10 @@ export interface ScoringContext {
   licenceToMasters: Map<string, Set<string>>;
   /** Médiane nationale du loyer au m² (T1-T2), utilisée si la commune n'a pas d'indicateur. */
   medianRentM2: number;
+  /** Métiers ONISEP et liens formation → métier. */
+  jobs?: JobsIndex;
+  /** Rareté des mots parmi les formations (idf), pour le critère « thématique ». */
+  idf?: Map<string, number>;
 }
 
 export type Assessment = Omit<Evaluation, 'total' | 'reliability'>;
@@ -543,7 +549,8 @@ const scoreTrajet: Scorer = (_o, p, _ctx, m, _b, x) => {
   };
 };
 
-const scoreEnergie: Scorer = (o, p, _ctx, m, _b, x) => {
+/** Charge hebdomadaire (cours et travail perso, trajets pondérés, job) et ratio énergie / charge. */
+function energyBalance(o: Offer, p: Profile, m: Mobility) {
   const apprentice = isApprentice(o, p);
   const load = apprentice ? ALTERNANCE_LOAD : TYPES[o.ty].load;
   const pen = PENIBILITE[m.localMode];
@@ -551,9 +558,14 @@ const scoreEnergie: Scorer = (o, p, _ctx, m, _b, x) => {
   const job = apprentice ? 0 : p.jobHours;
   const total = load + commuteLoad + job;
   const ratio = p.weeklyEnergyH / total;
-  if (!x) return { score: Math.round(lerp(ratio, [[0.6, 0], [0.8, 35], [0.95, 65], [1.1, 85], [1.3, 100]])), confidence: 'estimate', summary: '' };
+  return { apprentice, load, pen, commuteLoad, job, total, ratio, score: Math.round(lerp(ratio, [[0.6, 0], [0.8, 35], [0.95, 65], [1.1, 85], [1.3, 100]])) };
+}
+
+const scoreEnergie: Scorer = (o, p, _ctx, m, _b, x) => {
+  const { apprentice, load, pen, commuteLoad, job, total, ratio, score } = energyBalance(o, p, m);
+  if (!x) return { score, confidence: 'estimate', summary: '' };
   return {
-    score: Math.round(lerp(ratio, [[0.6, 0], [0.8, 35], [0.95, 65], [1.1, 85], [1.3, 100]])),
+    score,
     confidence: 'estimate',
     summary: `Charge ≈ ${fmtInt(total)} h/sem. pour ${fmtInt(p.weeklyEnergyH)} h d’énergie (ratio ${fmt1(ratio)})`,
     details: [
@@ -572,9 +584,253 @@ const scoreCarbone: Scorer = (_o, _p, _ctx, m, _b, x) => ({
   source: 'ADEME Impact CO2'
 });
 
+// ------------------------------------------------------------------ projet, métiers et enjeux
+
+const offerStemCache = new WeakMap<Offer, Set<string>>();
+/** Racines des mots décrivant une formation : intitulé, parcours, secteur, mots-clés. */
+export function offerStems(o: Offer): Set<string> {
+  let s = offerStemCache.get(o);
+  if (!s) {
+    s = stems(`${o.nm} ${o.pc ?? ''} ${o.sector ?? ''} ${o.keywords ?? ''}`);
+    offerStemCache.set(o, s);
+  }
+  return s;
+}
+const offerTextCache = new WeakMap<Offer, string>();
+function offerText(o: Offer): string {
+  let t = offerTextCache.get(o);
+  if (t == null) {
+    t = norm(`${o.nm} ${o.pc ?? ''} ${o.sector ?? ''} ${o.keywords ?? ''}`);
+    offerTextCache.set(o, t);
+  }
+  return t;
+}
+
+/** Rareté de chaque racine parmi les formations : ln(N / nombre de formations qui la contiennent). */
+export function computeIdf(offers: Offer[]): Map<string, number> {
+  const df = new Map<string, number>();
+  for (const o of offers) for (const s of offerStems(o)) df.set(s, (df.get(s) ?? 0) + 1);
+  const n = Math.max(1, offers.length);
+  return new Map([...df].map(([s, d]) => [s, Math.log(n / d)]));
+}
+
+let userTextMemo: { text: string; stems: Set<string>; labels: Map<string, string> } = { text: '\u0000', stems: new Set(), labels: new Map() };
+function userText(p: Profile) {
+  const text = `${p.projectText} ${p.subject} ${p.missions}`.trim();
+  if (userTextMemo.text !== text) userTextMemo = { text, stems: stems(text), labels: stemLabels(text) };
+  return userTextMemo;
+}
+
+const scoreThematique: Scorer = (o, p, ctx, _m, _b, x) => {
+  const u = userText(p);
+  if (!u.text) return { score: null, confidence: 'na', summary: 'Décris ton projet ou ton sujet pour activer ce critère' };
+  const idf = ctx.idf;
+  // Seuls les mots présents dans au moins une formation peuvent départager les offres.
+  const useful = [...u.stems].filter((s) => !idf || idf.has(s));
+  if (!useful.length) return { score: null, confidence: 'na', summary: 'Aucun mot de ton projet ne figure dans les intitulés des formations' };
+  const os = offerStems(o);
+  let total = 0;
+  let hit = 0;
+  const matched: string[] = [];
+  for (const s of useful) {
+    const w = idf?.get(s) ?? 2;
+    total += w;
+    if (os.has(s)) {
+      hit += w;
+      matched.push(s);
+    }
+  }
+  const ratio = total ? hit / total : 0;
+  const score = Math.round(clamp(15 + ratio * 170));
+  if (!x) return { score, confidence: 'estimate', summary: '' };
+  const words = matched.sort((a, b) => (idf?.get(b) ?? 0) - (idf?.get(a) ?? 0)).slice(0, 6).map((s) => u.labels.get(s) ?? s);
+  return {
+    score,
+    confidence: 'estimate',
+    summary: words.length ? `Mots en commun : ${words.join(', ')}` : 'Peu de points communs avec ton projet et ton sujet',
+    details: [
+      `${matched.length} mot${matched.length > 1 ? 's' : ''} sur ${useful.length} de ta description se retrouve${matched.length > 1 ? 'nt' : ''} dans la formation (les mots rares comptent davantage)`,
+      ...(o.keywords ? [`Mots-clés de la formation : ${o.keywords.slice(0, 160)}${o.keywords.length > 160 ? '…' : ''}`] : [])
+    ]
+  };
+};
+
+const scoreEntreprise: Scorer = (o, p, ctx, _m, _b, x) => {
+  if (!isAlternant(p) || p.company.canKeep === 'non') {
+    return { score: null, confidence: 'na', summary: 'Non concerné : tu n’es pas en alternance avec une entreprise qui peut te garder' };
+  }
+  const name = p.company.name.trim() || 'ton entreprise';
+  if ((o.al ?? 0) < 1) {
+    return { score: 10, confidence: 'data', summary: x ? `Pas d’alternance identifiée : tu ne pourrais pas rester chez ${name}` : '' };
+  }
+  const place = p.company.place;
+  const dist = place ? haversineKm(place.lat, place.lon, o.lat, o.lon) : null;
+  let score = dist == null ? 60 : lerp(dist, [[0, 100], [30, 100], [80, 70], [200, 40], [500, 15]]);
+  const reach = o.fo ? ctx.jobs?.byFor.get(o.fo) ?? [] : [];
+  const sameSector = p.company.sector != null && reach.some((m) => m.sectors.includes(p.company.sector!));
+  if (sameSector) score += 10;
+  score = Math.round(clamp(score));
+  if (!x) return { score, confidence: dist == null ? 'estimate' : 'data', summary: '' };
+  return {
+    score,
+    confidence: dist == null ? 'estimate' : 'data',
+    summary: dist == null ? 'Alternance possible (indique la commune de ton entreprise pour estimer la distance)' : `Alternance possible, à ${fmtKm(dist)} de ${name}`,
+    details: [
+      ...(p.company.canKeep === 'peut-etre' ? ['Ton entreprise n’a pas encore confirmé qu’elle peut te garder'] : []),
+      ...(sameSector && ctx.jobs ? [`Mène à des métiers du secteur de ton entreprise : ${ctx.jobs.sectors[p.company.sector!]}`] : []),
+      'Au-delà d’une heure de trajet, l’alternance reste possible avec un rythme par périodes longues (semaines entières).'
+    ]
+  };
+};
+
+// Mots trop génériques dans les noms de métiers pour rapprocher un métier d'une formation.
+const GENERIC_TITLES = new Set(
+  'ingeni techni respon charge assist agent chef direct consei consul gestio specia expert operat employ attach cadre adjoin profes'.split(' ')
+);
+
+const scoreMetiers: Scorer = (o, p, ctx, _m, _b, x) => {
+  const jobs = ctx.jobs;
+  if (!jobs || (!p.metiers.length && !p.sectors.length)) {
+    return { score: null, confidence: 'na', summary: 'Choisis des métiers ou des secteurs pour activer ce critère' };
+  }
+  const reach = o.fo ? jobs.byFor.get(o.fo) ?? [] : [];
+  const targets = p.metiers.map((id) => jobs.byId.get(id)).filter((m): m is Metier => !!m);
+  const reachLine = (list: Metier[]) => `Métiers accessibles selon l’ONISEP : ${list.slice(0, 5).map((m) => m.name).join(', ')}${list.length > 5 ? '…' : ''}`;
+
+  const direct = reach.filter((m) => p.metiers.includes(m.id));
+  if (direct.length) {
+    return {
+      score: 100,
+      confidence: 'data',
+      summary: x ? `Mène au${direct.length > 1 ? 'x' : ''} métier${direct.length > 1 ? 's' : ''} : ${direct.slice(0, 3).map((m) => m.name).join(', ')}` : '',
+      details: x ? [reachLine(reach)] : undefined,
+      source: 'Fiches métiers ONISEP'
+    };
+  }
+  const wanted = new Set([...p.sectors, ...targets.flatMap((t) => t.sectors)]);
+  const inSector = reach.filter((m) => m.sectors.some((s) => wanted.has(s)));
+  if (inSector.length) {
+    const sector = jobs.sectors[inSector[0].sectors.find((s) => wanted.has(s))!];
+    return {
+      score: 75,
+      confidence: 'data',
+      summary: x ? `Mène à des métiers du secteur « ${sector} »` : '',
+      details: x ? [`Par exemple : ${inSector.slice(0, 4).map((m) => m.name).join(', ')}`] : undefined,
+      source: 'Fiches métiers ONISEP'
+    };
+  }
+  const os = offerStems(o);
+  const close = targets.find((t) => [...stems(t.name)].some((s) => !GENERIC_TITLES.has(s) && os.has(s)));
+  if (close) {
+    return {
+      score: 55,
+      confidence: 'estimate',
+      summary: x ? `Thématique proche du métier « ${close.name} »` : '',
+      details: x && reach.length ? [reachLine(reach)] : undefined
+    };
+  }
+  const domains = new Set<DomainId>([...targets.flatMap((t) => t.domains), ...p.sectors.flatMap((s) => sectorDomains(jobs.sectors[s] ?? ''))]);
+  if (o.dm.some((d) => domains.has(d))) {
+    return {
+      score: 35,
+      confidence: 'estimate',
+      summary: x ? 'Même domaine que tes métiers visés, sans lien direct' : '',
+      details: x && reach.length ? [reachLine(reach)] : undefined
+    };
+  }
+  return {
+    score: 5,
+    confidence: reach.length ? 'data' : 'estimate',
+    summary: x ? 'Ne mène pas aux métiers ou secteurs que tu as choisis' : '',
+    details: x && reach.length ? [reachLine(reach)] : undefined
+  };
+};
+
+const RE_INTERNATIONAL = /international|europe|global|anglais|english|langues etrangeres|erasmus|mondial|monde|world|cross cultural|interculturel/;
+const RE_ENTREPRENDRE = /entrepreneu|creation d entreprise|start up|startup|innovation|\bpme\b|independant|business developer|reprise d entreprise/;
+const RE_PUBLIC = /\bpublic|publique|administration|territori|collectivit|fonction publique|enseignement|education|professorat|meef|defense|police|justice|sante publique/;
+const RE_RECHERCHE = /recherche|research|fondamental|theorique|doctorat|laboratoire|\bphd\b|modelisation/;
+const RE_IMPACT = /durable|transition|environnement|ecolog|climat|biodiversit|renouvelable|solidaire|economie sociale|humanitaire|\bsocial|sante|inclusi|handicap|developpement local/;
+
+function statutShare(reach: Metier[], jobs: JobsIndex | undefined, re: RegExp): number {
+  if (!jobs || !reach.length) return 0;
+  const hits = reach.filter((m) => m.statuts.some((i) => re.test(jobs.statuts[i] ?? ''))).length;
+  return hits / reach.length;
+}
+
+/** Note de 0 à 100 d'un enjeu pour une formation, ou null si l'information manque. */
+function goalScore(g: GoalId, o: Offer, p: Profile, ctx: ScoringContext, m: Mobility): number | null {
+  const text = offerText(o);
+  const reach = o.fo ? ctx.jobs?.byFor.get(o.fo) ?? [] : [];
+  switch (g) {
+    case 'emploi':
+      return o.in?.[0] != null ? lerp(o.in[0], [[30, 0], [50, 30], [67, 60], [87, 100]]) : null;
+    case 'salaire': {
+      if (o.in?.[2] != null) return lerp(o.in[2], [[1600, 0], [2200, 40], [2500, 65], [3000, 100]]);
+      const proxy: Partial<Record<Offer['ty'], number>> = { inge: 80, ecom: 75, msc: 65, master: 60, ecole5: 55, de: 55, lp: 40, but3: 40, bachelor: 40, l3: 35 };
+      return proxy[o.ty] ?? null;
+    }
+    case 'stabilite':
+      return o.in?.[1] != null ? lerp(o.in[1], [[30, 0], [60, 50], [90, 100]]) : null;
+    case 'international':
+      return RE_INTERNATIONAL.test(text) ? 100 : o.ty === 'msc' || o.ty === 'ecom' ? 70 : o.dm.includes('lettres') ? 55 : 25;
+    case 'entreprendre':
+      if (RE_ENTREPRENDRE.test(text)) return 100;
+      if (statutShare(reach, ctx.jobs, /independant|artisan|liberal/) >= 0.3) return 75;
+      return o.ty === 'ecom' || o.dm.includes('gestion') ? 55 : 25;
+    case 'public':
+      if (RE_PUBLIC.test(text)) return 100;
+      return statutShare(reach, ctx.jobs, /fonctionnaire/) >= 0.3 ? 80 : 25;
+    case 'recherche': {
+      const research = RE_RECHERCHE.test(text);
+      if (o.ty === 'master') return ((o.st ?? 0) === 0 ? 60 : 45) + (research ? 40 : 0);
+      if (o.ty === 'inge' || o.ty === 'l3') return research ? 70 : 45;
+      return research ? 50 : 15;
+    }
+    case 'impact':
+      if (o.dm.includes('envir') || o.dm.includes('agri')) return 100;
+      if (RE_IMPACT.test(text)) return 90;
+      return o.dm.includes('sante') ? 80 : 25;
+    case 'alternance':
+      return (o.al ?? 0) >= 1 ? 100 : 10;
+    case 'equilibre':
+      return energyBalance(o, p, m).score;
+    case 'proximite':
+      if (m.tooFar) return 0;
+      if (!m.moves) return Number.isFinite(m.distanceKm) && m.distanceKm > 50 ? 70 : 100;
+      return m.distanceKm < 150 ? 55 : m.distanceKm < 400 ? 35 : 15;
+  }
+}
+
+const scoreEnjeux: Scorer = (o, p, ctx, m, _b, x) => {
+  if (!p.goals.length) return { score: null, confidence: 'na', summary: 'Choisis tes enjeux pour plus tard pour activer ce critère' };
+  const parts = p.goals.map((g) => [g, goalScore(g, o, p, ctx, m)] as const).filter((e): e is readonly [GoalId, number] => e[1] != null);
+  if (!parts.length) return { score: null, confidence: 'na', summary: 'Pas assez d’informations pour évaluer tes enjeux sur cette formation' };
+  const score = Math.round(parts.reduce((s, [, v]) => s + v, 0) / parts.length);
+  const dataGoals: GoalId[] = ['emploi', 'stabilite', 'alternance', 'equilibre', 'proximite'];
+  const confidence = parts.every(([g]) => dataGoals.includes(g)) ? 'data' : 'estimate';
+  if (!x) return { score, confidence, summary: '' };
+  const sorted = [...parts].sort((a, b) => b[1] - a[1]);
+  const good = sorted.filter(([, v]) => v >= 70).map(([g]) => GOAL_BY_ID[g].label.toLowerCase());
+  const weak = sorted.filter(([, v]) => v < 40).map(([g]) => GOAL_BY_ID[g].label.toLowerCase());
+  return {
+    score,
+    confidence,
+    summary: good.length ? `Sert bien : ${good.slice(0, 3).join(', ')}` : weak.length ? `Répond mal à : ${weak.slice(0, 2).join(', ')}` : 'Répond moyennement à tes enjeux',
+    details: [
+      ...sorted.map(([g, v]) => `${GOAL_BY_ID[g].label} : ${Math.round(v)}/100`),
+      ...p.goals.filter((g) => !parts.some(([k]) => k === g)).map((g) => `${GOAL_BY_ID[g].label} : pas de donnée pour cette formation`)
+    ]
+  };
+};
+
 const SCORERS: Record<CriterionId, Scorer> = {
   interet: scoreInteret,
   format: scoreFormat,
+  thematique: scoreThematique,
+  entreprise: scoreEntreprise,
+  metiers: scoreMetiers,
+  enjeux: scoreEnjeux,
   parcours: scoreParcours,
   admission: scoreAdmission,
   matieres: scoreMatieres,
@@ -588,7 +844,7 @@ const SCORERS: Record<CriterionId, Scorer> = {
   carbone: scoreCarbone
 };
 
-/** Calcule les 13 sous-scores d'une offre pour un profil (indépendant des pondérations). */
+/** Calcule les 17 sous-scores d'une offre pour un profil (indépendant des pondérations). */
 export function assess(o: Offer, p: Profile, ctx: ScoringContext, explain = true): Assessment {
   const mobility = computeMobility(o, p);
   const budget = computeBudget(o, p, mobility, ctx);

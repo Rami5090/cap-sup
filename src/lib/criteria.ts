@@ -15,7 +15,7 @@ export interface CriterionInfo {
 export const FAMILIES: { id: FamilyId; label: string; icon: string }[] = [
   { id: 'projet', label: 'Ton projet', icon: 'target' },
   { id: 'reussite', label: 'Réussite', icon: 'chart' },
-  { id: 'avenir', label: 'Débouchés', icon: 'briefcase' },
+  { id: 'avenir', label: 'Métiers et avenir', icon: 'briefcase' },
   { id: 'argent', label: 'Argent', icon: 'euro' },
   { id: 'quotidien', label: 'Vie quotidienne', icon: 'home' },
   { id: 'planete', label: 'Planète', icon: 'leaf' }
@@ -31,6 +31,16 @@ export const CRITERIA: CriterionInfo[] = [
     id: 'format', family: 'projet', label: 'Format et rythme', short: 'Format', icon: 'layers',
     question: 'Le type de formation et l’alternance que tu souhaites',
     help: 'Type de diplôme préféré, alternance souhaitée ou non.'
+  },
+  {
+    id: 'thematique', family: 'projet', label: 'Proximité avec ton projet et ton sujet', short: 'Thématique', icon: 'search',
+    question: 'Retrouver dans la formation ce que tu veux apprendre et ton sujet actuel',
+    help: 'Mots en commun entre ton projet de formation, ton sujet, tes missions et le contenu de la formation (intitulé, parcours, mots-clés Trouver mon master, sous-domaines ONISEP).'
+  },
+  {
+    id: 'entreprise', family: 'projet', label: 'Continuité avec ton entreprise', short: 'Entreprise', icon: 'building',
+    question: 'Pouvoir continuer ton alternance dans ton entreprise actuelle',
+    help: 'Alternance possible dans la formation, distance entre l’école et ton entreprise, secteur des métiers visés. Non concerné si tu n’es pas en alternance.'
   },
   {
     id: 'parcours', family: 'reussite', label: 'Cohérence avec ton parcours', short: 'Parcours', icon: 'route',
@@ -53,9 +63,19 @@ export const CRITERIA: CriterionInfo[] = [
     help: 'Ton auto-évaluation comparée aux compétences mobilisées par le domaine et le type de formation.'
   },
   {
+    id: 'metiers', family: 'avenir', label: 'Débouchés vers tes métiers', short: 'Métiers', icon: 'target',
+    question: 'Que la formation mène aux métiers et aux secteurs qui t’attirent',
+    help: 'Liens officiels formation → métier des fiches métiers ONISEP, secteurs d’activité de ces métiers, puis proximité des mots-clés et des domaines.'
+  },
+  {
     id: 'insertion', family: 'avenir', label: 'Insertion professionnelle', short: 'Insertion', icon: 'briefcase',
     question: 'Trouver facilement un emploi après le diplôme',
     help: 'Taux d’emploi salarié à 18 mois, part d’emplois stables et salaire médian des diplômés (InserSup).'
+  },
+  {
+    id: 'enjeux', family: 'avenir', label: 'Tes enjeux pour plus tard', short: 'Enjeux', icon: 'compass',
+    question: 'Que la formation serve tes objectifs : emploi, salaire, international, impact…',
+    help: 'Moyenne des enjeux que tu as choisis, évalués avec les données de la formation (insertion, salaire, alternance, mots-clés, statuts des métiers accessibles, trajet, charge).'
   },
   {
     id: 'budget', family: 'argent', label: 'Budget', short: 'Budget', icon: 'wallet',
@@ -93,8 +113,8 @@ export const CRITERION_BY_ID = Object.fromEntries(CRITERIA.map((c) => [c.id, c])
 export const IMPORTANCE_LABELS = ['Ne compte pas', 'Peu important', 'Utile', 'Important', 'Très important', 'Essentiel'];
 
 export const DEFAULT_WEIGHTS: Weights = {
-  interet: 5, format: 3, parcours: 4, admission: 4, matieres: 3, competences: 3, insertion: 3,
-  budget: 4, immobilier: 2, logement: 3, trajet: 3, energie: 3, carbone: 1
+  interet: 5, format: 3, thematique: 3, entreprise: 4, parcours: 4, admission: 4, matieres: 3, competences: 3,
+  metiers: 4, insertion: 3, enjeux: 3, budget: 4, immobilier: 2, logement: 3, trajet: 3, energie: 3, carbone: 1
 };
 
 export interface Preset { id: string; label: string; description: string; weights: Weights }
@@ -102,18 +122,18 @@ export const PRESETS: Preset[] = [
   { id: 'equilibre', label: 'Équilibré', description: 'Un peu de tout, priorité à tes envies', weights: DEFAULT_WEIGHTS },
   {
     id: 'budget', label: 'Petit budget', description: 'Coût, logement et aides avant tout',
-    weights: { interet: 4, format: 2, parcours: 3, admission: 3, matieres: 2, competences: 2, insertion: 2, budget: 5, immobilier: 5, logement: 4, trajet: 3, energie: 2, carbone: 1 }
+    weights: { interet: 4, format: 2, thematique: 2, entreprise: 3, parcours: 3, admission: 3, matieres: 2, competences: 2, metiers: 3, insertion: 2, enjeux: 2, budget: 5, immobilier: 5, logement: 4, trajet: 3, energie: 2, carbone: 1 }
   },
   {
     id: 'ambition', label: 'Ambition et débouchés', description: 'Insertion, niveau et cohérence du parcours',
-    weights: { interet: 4, format: 2, parcours: 4, admission: 3, matieres: 4, competences: 4, insertion: 5, budget: 2, immobilier: 1, logement: 2, trajet: 1, energie: 2, carbone: 1 }
+    weights: { interet: 4, format: 2, thematique: 3, entreprise: 3, parcours: 4, admission: 3, matieres: 4, competences: 4, metiers: 5, insertion: 5, enjeux: 4, budget: 2, immobilier: 1, logement: 2, trajet: 1, energie: 2, carbone: 1 }
   },
   {
     id: 'proche', label: 'Rester près de chez moi', description: 'Trajets courts, pas de déménagement',
-    weights: { interet: 4, format: 2, parcours: 3, admission: 3, matieres: 2, competences: 2, insertion: 2, budget: 3, immobilier: 1, logement: 1, trajet: 5, energie: 4, carbone: 2 }
+    weights: { interet: 4, format: 2, thematique: 2, entreprise: 4, parcours: 3, admission: 3, matieres: 2, competences: 2, metiers: 3, insertion: 2, enjeux: 3, budget: 3, immobilier: 1, logement: 1, trajet: 5, energie: 4, carbone: 2 }
   },
   {
     id: 'equilibre_vie', label: 'Équilibre de vie', description: 'Rythme soutenable, peu de fatigue',
-    weights: { interet: 4, format: 3, parcours: 3, admission: 3, matieres: 3, competences: 3, insertion: 2, budget: 3, immobilier: 2, logement: 3, trajet: 4, energie: 5, carbone: 2 }
+    weights: { interet: 4, format: 3, thematique: 3, entreprise: 3, parcours: 3, admission: 3, matieres: 3, competences: 3, metiers: 3, insertion: 2, enjeux: 4, budget: 3, immobilier: 2, logement: 3, trajet: 4, energie: 5, carbone: 2 }
   }
 ];

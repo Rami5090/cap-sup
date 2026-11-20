@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-19T15:02:25.781Z",
+ "generatedAt": "2026-11-20T12:34:37.546Z",
  "sources": [
   {
    "key": "monmaster",
@@ -56,6 +56,27 @@
    "producer": "Ministère de la Transition écologique / Ministère du Logement",
    "page": "https://www.data.gouv.fr/fr/datasets/liste-des-communes-selon-le-zonage-abc/",
    "licence": "Licence Ouverte v2.0 (Etalab)"
+  },
+  {
+   "key": "tmm",
+   "label": "Trouver mon master : mots-clés disciplinaires, sectoriels et métiers des mentions de master",
+   "producer": "Ministère de l’Enseignement supérieur",
+   "page": "https://data.enseignementsup-recherche.gouv.fr/explore/dataset/fr-esr-tmm-donnees-du-portail-dinformation-trouver-mon-master-parcours-de-format/",
+   "licence": "Licence Ouverte (Etalab)"
+  },
+  {
+   "key": "metiersCsv",
+   "label": "Idéo-Métiers : métiers, domaines et sous-domaines, codes ROME",
+   "producer": "ONISEP",
+   "page": "https://opendata.onisep.fr/",
+   "licence": "Licence Ouverte (Etalab)"
+  },
+  {
+   "key": "fichesMetiers",
+   "label": "Idéo-Fiches métiers : secteurs, niveau d’accès, statuts et formations menant à chaque métier",
+   "producer": "ONISEP",
+   "page": "https://opendata.onisep.fr/",
+   "licence": "ODbL"
   },
   {
    "key": "communes",

@@ -4,14 +4,17 @@ Cap Sup aide les étudiants qui **terminent un Bac+2 ou un Bac+3** à choisir le
 licences professionnelles, L3, BUT 3e année, écoles d’ingénieurs et de commerce (admissions parallèles), MSc…
 Un mode **post-bac** (Parcoursup) est aussi disponible.
 
-L’application calcule pour chaque formation un **taux de compatibilité** à partir de 13 critères, dont l’étudiant règle
+L’application calcule pour chaque formation un **taux de compatibilité** à partir de 17 critères, dont l’étudiant règle
 lui-même l’importance. Chaque note est expliquée et sourcée.
 
 **Site en ligne : https://rami5090.github.io/cap-sup/**
 
 ## Fonctionnalités
 
-- Questionnaire en 6 étapes : parcours, matières et compétences, projet, vie pratique, budget, priorités.
+- Questionnaire en 8 étapes : parcours, situation actuelle (formation initiale ou alternance, entreprise, sujet traité),
+  matières et compétences, projet de formation, métiers et enjeux d’avenir, vie pratique, budget, priorités.
+- Recherche parmi les 1 138 métiers de l’ONISEP et les 48 secteurs d’activité (par exemple la logistique mène aussi à
+  l’aéronautique), avec les formations qui préparent à chaque métier.
 - Taux de compatibilité pondéré, recalculé en direct quand on bouge un curseur de priorité.
 - Fiche détaillée par formation : explication de chaque critère, budget mensuel, taux de propositions selon le diplôme
   d’origine (L3, licence pro, BUT), insertion professionnelle, loyers, résidences Crous, empreinte carbone.
@@ -21,13 +24,13 @@ lui-même l’importance. Chaque note est expliquée et sourcée.
 - Page « Méthode et sources » : formule, hypothèses, limites.
 - Thème clair ou sombre, affichage mobile, navigation au clavier. Les réponses restent dans le navigateur.
 
-## Les 13 critères
+## Les 17 critères
 
 | Famille | Critères |
 | --- | --- |
-| Ton projet | Intérêt pour le domaine, format et rythme (type de diplôme, alternance) |
+| Ton projet | Intérêt pour le domaine, format et rythme, proximité avec ton projet et ton sujet, continuité avec ton entreprise (alternance) |
 | Réussite | Cohérence avec le parcours, chances d’admission, niveau dans les matières clés, compétences |
-| Débouchés | Insertion professionnelle |
+| Métiers et avenir | Débouchés vers tes métiers, insertion professionnelle, enjeux pour plus tard (emploi, salaire, international, impact…) |
 | Argent | Budget (ressources − coûts), coût de l’immobilier |
 | Vie quotidienne | Logement disponible, trajet, ratio énergie / charge |
 | Planète | Empreinte carbone des trajets |
@@ -44,6 +47,9 @@ soi) est retiré du calcul.
 | Compatibilités mentions de licence → master | Ministère de l’Enseignement supérieur |
 | Parcoursup 2025 (mode post-bac) | Ministère de l’Enseignement supérieur (SIES) |
 | Idéo-Actions de formation – enseignement supérieur | ONISEP |
+| Idéo-Fiches métiers (secteurs, niveau d’accès, formations menant au métier) — licence ODbL | ONISEP |
+| Idéo-Métiers (domaines et codes ROME des métiers) | ONISEP |
+| Trouver mon master : mots-clés métiers, secteurs et disciplines des mentions | Ministère de l’Enseignement supérieur |
 | Carte des loyers 2025 (T1-T2) | Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin |
 | Zonage ABC (juin 2026) | Ministère du Logement |
 | Résidences étudiantes | CNOUS (réseau des Crous) |

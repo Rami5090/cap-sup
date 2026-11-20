@@ -29,9 +29,27 @@ export function defaultProfile(level: Level = 3): Profile {
     bourse: 'non',
     apl: 0,
     livingCosts: 300,
-    age: level === 3 ? 21 : level === 2 ? 20 : 18
+    age: level === 3 ? 21 : level === 2 ? 20 : 18,
+    regime: 'initiale',
+    company: { name: '', sector: null, place: null, canKeep: 'peut-etre' },
+    missions: '',
+    subject: '',
+    projectText: '',
+    metiers: [],
+    sectors: [],
+    goals: []
   };
 }
+
+export const REGIME_LABELS: Record<Profile['regime'], string> = {
+  initiale: 'Formation initiale',
+  apprentissage: 'Alternance (apprentissage)',
+  contrat_pro: 'Alternance (contrat de professionnalisation)',
+  emploi: 'En emploi / reprise d’études',
+  autre: 'Autre (césure, pause…)'
+};
+
+export const isAlternant = (p: Pick<Profile, 'regime'>) => p.regime === 'apprentissage' || p.regime === 'contrat_pro';
 
 export const DIPLOMAS_BY_LEVEL: Record<Level, { id: Diploma; label: string; hint: string }[]> = {
   3: [

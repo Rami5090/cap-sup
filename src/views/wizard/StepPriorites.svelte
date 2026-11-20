@@ -54,7 +54,7 @@
   </div>
 
   <p class="small muted note">
-    <Icon name="info" size={16} class="inline" /> Le taux de compatibilité est la moyenne des 13 notes (de 0 à 100), pondérée
+    <Icon name="info" size={16} class="inline" /> Le taux de compatibilité est la moyenne des 17 notes (de 0 à 100), pondérée
     par ces importances. Un critère « Ne compte pas » est ignoré. Tu pourras tout réajuster depuis les résultats, qui se
     mettent à jour en direct.
   </p>

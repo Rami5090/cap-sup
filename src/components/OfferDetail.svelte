@@ -27,6 +27,19 @@
   );
   const CONF = { data: 'Calculé sur données publiques', estimate: 'Estimation', na: 'Non concerné' } as const;
 
+  // Métiers accessibles (fiches métiers ONISEP), métiers visés en premier.
+  let showAllJobs = $state(false);
+  const reach = $derived.by(() => {
+    if (!offer?.fo || !data.jobs) return [];
+    const list = data.jobs.byFor.get(offer.fo) ?? [];
+    return [...list].sort((a, b) => Number(app.profile.metiers.includes(b.id)) - Number(app.profile.metiers.includes(a.id)) || a.name.localeCompare(b.name, 'fr'));
+  });
+  const chosen = $derived(reach.filter((m) => app.profile.metiers.includes(m.id)));
+  $effect(() => {
+    void id;
+    showAllJobs = false;
+  });
+
   let dialog: HTMLDivElement | undefined = $state();
   $effect(() => {
     if (id && dialog) {
@@ -198,6 +211,24 @@
         {#if app.profile.level === 3 && offer.ao}· Origine retenue pour toi : candidats {ORIGIN_LABELS[app.profile.diploma === 'licence' ? 'l3' : app.profile.diploma === 'lp' ? 'lp' : app.profile.diploma === 'but' ? 'but' : 'au']}{/if}
       </p>
     </section>
+
+    {#if reach.length}
+      <section>
+        <h3>Métiers auxquels cette formation prépare</h3>
+        <p class="small muted">D’après les fiches métiers de l’ONISEP{chosen.length ? ' ; tes métiers visés sont mis en avant' : ''}.</p>
+        <ul class="jobs">
+          {#each reach.slice(0, showAllJobs ? reach.length : 10) as m (m.id)}
+            <li class:on={app.profile.metiers.includes(m.id)}>
+              <a href={m.url} target="_blank" rel="noopener">{m.name}</a>
+              {#if app.profile.metiers.includes(m.id)}<span class="badge badge-great">visé</span>{/if}
+            </li>
+          {/each}
+        </ul>
+        {#if reach.length > 10 && !showAllJobs}
+          <button class="btn btn-ghost btn-sm" onclick={() => (showAllJobs = true)}>Voir les {reach.length} métiers</button>
+        {/if}
+      </section>
+    {/if}
 
     <section class="links">
       <h3>Pour aller plus loin</h3>
@@ -464,6 +495,37 @@
     white-space: nowrap;
     overflow: hidden;
     padding: 0 6px;
+  }
+  .jobs {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .jobs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.88rem;
+  }
+  .jobs li.on {
+    border-color: var(--great);
+    background: var(--great-soft);
+  }
+  .jobs a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .jobs a:hover {
+    color: var(--brand-strong);
+    text-decoration: underline;
   }
   .links ul {
     padding-left: 18px;

@@ -10,7 +10,7 @@
   import { CRITERIA, PRESETS } from '../lib/criteria';
   import { fmtInt } from '../lib/format';
   import { LEVEL_LABELS } from '../lib/profile';
-  import { SORT_LABELS, assessAll, prefilter, rankAll, type SortKey } from '../lib/ranking';
+  import { SORT_LABELS, assessAll, focusDomains, prefilter, rankAll, type SortKey } from '../lib/ranking';
   import { app, defaultFilters, router, type Filters } from '../lib/state.svelte';
   import { data } from '../lib/store.svelte';
   import type { OfferType, Profile, Weights } from '../lib/types';
@@ -32,12 +32,12 @@
   const filters = $derived($state.snapshot(app.filters) as Filters);
   const weights = $derived($state.snapshot(app.weights) as Weights);
 
-  const candidates = $derived(prefilter(data.offers, profile, filters));
+  const candidates = $derived(prefilter(data.offers, profile, filters, data.jobs ?? undefined));
   const assessed = $derived(assessAll(candidates, profile, data.ctx));
   const ranked = $derived(rankAll(assessed, weights, filters, sort));
   const visible = $derived(onlyFavorites ? ranked.filter((r) => app.favorites.includes(r.a.offer.id)) : ranked);
   const weightTotal = $derived(CRITERIA.reduce((s, c) => s + (weights[c.id] ?? 0), 0));
-  const hiddenByDomain = $derived(!filters.allDomains && Object.values(profile.interests).some(Boolean));
+  const hiddenByDomain = $derived(!filters.allDomains && focusDomains(profile, data.jobs ?? undefined).domains.size > 0);
 
   $effect(() => {
     // Revenir en haut de liste quand les critères changent.
@@ -90,7 +90,7 @@
     <div class="notice">
       <Icon name="pin" size={18} />
       <span>Indique ta commune pour calculer distances, trajets, empreinte carbone et loyers.</span>
-      <a class="btn btn-sm btn-primary" href="#/profil/4">Ajouter ma commune</a>
+      <a class="btn btn-sm btn-primary" href="#/profil/6">Ajouter ma commune</a>
     </div>
   {/if}
 

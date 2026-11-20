@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_WEIGHTS } from './criteria';
+import { buildJobsIndex } from './jobs';
 import { defaultProfile } from './profile';
 import {
-  admissionProbability, assess, combine, computeBudget, computeMobility, evaluate, lerp, mentionIndex, percentile,
+  admissionProbability, assess, combine, computeBudget, computeIdf, computeMobility, evaluate, lerp, mentionIndex, percentile,
   type ScoringContext
 } from './scoring';
 import type { Commune, Offer, Profile } from './types';
@@ -168,5 +169,51 @@ describe('critères et taux de compatibilité', () => {
     const low = assess(o, profile({ average: 10.5 }), ctx).scores.admission.score!;
     const high = assess(o, profile({ average: 16 }), ctx).scores.admission.score!;
     expect(high).toBeGreaterThan(low);
+  });
+});
+
+describe('nouvelles variables : métiers, thématique, entreprise, enjeux', () => {
+  const jobs = buildJobsIndex({
+    v: 1,
+    sectors: ['Construction aéronautique, ferroviaire et navale', 'Logistique et transport'],
+    statuts: ['salarié', 'fonctionnaire'],
+    metiers: [
+      [1, 'ingénieur/e aéronautique', '', [0], 5, [0], ['meca'], [100], ''],
+      [2, 'logisticien/ne', 'responsable logistique', [1], 3, [0], ['logist'], [200], '']
+    ]
+  });
+  const jctx: ScoringContext = { ...ctx, jobs, idf: computeIdf([offer({ nm: 'Logistique et supply chain' }), offer({ nm: 'Mécanique' })]) };
+
+  it('métiers : non concerné sans choix, 100 si la formation mène au métier visé, 75 si même secteur', () => {
+    expect(assess(offer({ fo: 100 }), profile(), jctx).scores.metiers.score).toBeNull();
+    expect(assess(offer({ fo: 100 }), profile({ metiers: [1] }), jctx).scores.metiers.score).toBe(100);
+    expect(assess(offer({ fo: 100 }), profile({ sectors: [0] }), jctx).scores.metiers.score).toBe(75);
+    expect(assess(offer({ fo: 200, dm: ['logist'] }), profile({ metiers: [1] }), jctx).scores.metiers.score).toBeLessThan(40);
+  });
+
+  it('thématique : favorise les formations qui reprennent les mots du projet', () => {
+    const p = profile({ projectText: 'me spécialiser en logistique et supply chain' });
+    const close = assess(offer({ nm: 'Logistique et supply chain' }), p, jctx).scores.thematique.score!;
+    const far = assess(offer({ nm: 'Mécanique' }), p, jctx).scores.thematique.score!;
+    expect(close).toBeGreaterThan(far);
+    expect(assess(offer(), profile(), jctx).scores.thematique.score).toBeNull();
+  });
+
+  it('entreprise : seulement pour un alternant, selon l’alternance proposée et la distance', () => {
+    const company = { name: 'Transporteur', sector: 1, place: { nom: 'Lille', code: '59350', dep: '59', lat: 50.63, lon: 3.06 }, canKeep: 'oui' as const };
+    expect(assess(offer({ al: 1 }), profile(), jctx).scores.entreprise.score).toBeNull();
+    const p = profile({ regime: 'apprentissage', company });
+    expect(assess(offer({ al: 0 }), p, jctx).scores.entreprise.score).toBe(10);
+    const near = assess(offer({ al: 1 }), p, jctx).scores.entreprise.score!;
+    const far = assess(offer({ al: 1, commune: paris, lat: paris.lat, lon: paris.lon }), p, jctx).scores.entreprise.score!;
+    expect(near).toBe(100);
+    expect(far).toBeLessThan(near);
+  });
+
+  it('enjeux : moyenne des enjeux choisis, non concerné sans enjeu', () => {
+    expect(assess(offer(), profile(), jctx).scores.enjeux.score).toBeNull();
+    const p = profile({ goals: ['alternance'] });
+    expect(assess(offer({ al: 1 }), p, jctx).scores.enjeux.score).toBe(100);
+    expect(assess(offer({ al: 0 }), p, jctx).scores.enjeux.score).toBe(10);
   });
 });

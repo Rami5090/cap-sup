@@ -50,7 +50,10 @@ class AppState {
   constructor() {
     const s = read();
     if (!s) return;
-    if (s.profile) this.profile = { ...defaultProfile(s.profile.level ?? 3), ...s.profile };
+    if (s.profile) {
+      const base = defaultProfile(s.profile.level ?? 3);
+      this.profile = { ...base, ...s.profile, company: { ...base.company, ...(s.profile.company ?? {}) } };
+    }
     if (s.weights) this.weights = { ...DEFAULT_WEIGHTS, ...s.weights };
     if (s.favorites) this.favorites = s.favorites;
     if (s.compare) this.compare = s.compare;
@@ -100,7 +103,15 @@ class AppState {
       savings: keep.savings,
       bourse: keep.bourse,
       apl: keep.apl,
-      livingCosts: keep.livingCosts
+      livingCosts: keep.livingCosts,
+      regime: keep.regime,
+      company: keep.company,
+      missions: keep.missions,
+      subject: keep.subject,
+      projectText: keep.projectText,
+      metiers: keep.metiers,
+      sectors: keep.sectors,
+      goals: keep.goals
     };
     this.filters.types = [];
     this.compare = [];

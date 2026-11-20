@@ -21,6 +21,20 @@
 </script>
 
 <div class="stack" style="--gap: 36px">
+  <section class="field">
+    <label for="project" class="field-label">Ton projet de formation, en quelques mots</label>
+    <p class="field-hint">
+      Ce que tu veux apprendre ou approfondir, le type de poste visé… Ces mots sont rapprochés du contenu de chaque formation.
+    </p>
+    <textarea
+      id="project"
+      class="input area"
+      rows="3"
+      placeholder="Ex. : me spécialiser en supply chain dans l’aéronautique, avec une dimension internationale"
+      bind:value={app.profile.projectText}
+    ></textarea>
+  </section>
+
   <section>
     <div class="row">
       <h2 class="h">Ce qui t’attire</h2>
@@ -59,6 +73,11 @@
   .h {
     font-size: 1.2rem;
     margin: 0;
+  }
+  .area {
+    resize: vertical;
+    line-height: 1.5;
+    min-height: 84px;
   }
   :global(.inline) {
     display: inline;

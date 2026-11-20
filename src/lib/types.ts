@@ -46,6 +46,8 @@ export interface RawOffer {
   mt?: [number, number, number, number, number]; // mentions des admis : sans, AB, B, TB, TBF (%)
   bc?: [number, number, number]; // bacs des admis : général, techno, pro (%)
   bo?: number; // % boursiers
+  fo?: number; // identifiant de formation ONISEP (FOR.xxx) : lien vers les fiches métiers
+  ki?: number; // index des mots-clés (Trouver mon master, sous-domaines ONISEP)
 }
 
 /** [code, nom, lat, lon, loyer €/m², loyer communal (1) ou maille (0), zone ABC, nb Crous ≤ 10 km, Crous le plus proche (km), dép., population] */
@@ -56,7 +58,31 @@ export interface OfferDataset {
   etabs: [string, string][];
   communes: RawCommune[];
   sectors: string[];
+  keywords?: string[];
   offers: RawOffer[];
+}
+
+/** Métier ONISEP : [id MET, nom, synonymes « | », secteurs, niveau d'accès (années après le bac), statuts, domaines, formations FOR, accroche] */
+export type RawMetier = [number, string, string, number[], number | null, number[], DomainId[], number[], string];
+
+export interface MetiersDataset {
+  v: number;
+  sectors: string[];
+  statuts: string[];
+  metiers: RawMetier[];
+}
+
+export interface Metier {
+  id: number;
+  name: string;
+  synonyms: string[];
+  sectors: number[];
+  level: number | null;
+  statuts: number[];
+  domains: DomainId[];
+  fors: number[];
+  accroche: string;
+  url: string;
 }
 
 export interface Commune {
@@ -80,6 +106,7 @@ export interface Offer extends RawOffer {
   lat: number;
   lon: number;
   sector?: string;
+  keywords?: string;
   url: string;
   urlLabel: string;
 }
@@ -104,6 +131,20 @@ export type SubjectId =
 export type SkillId =
   | 'raisonnement' | 'sciences' | 'redaction' | 'oral' | 'langues' | 'creativite' | 'numerique' | 'autonomie'
   | 'equipe' | 'pratique' | 'empathie';
+
+/** Situation actuelle de l'étudiant. */
+export type Regime = 'initiale' | 'apprentissage' | 'contrat_pro' | 'emploi' | 'autre';
+/** Enjeux pour plus tard. */
+export type GoalId =
+  | 'emploi' | 'salaire' | 'stabilite' | 'international' | 'entreprendre' | 'public' | 'recherche' | 'impact'
+  | 'alternance' | 'equilibre' | 'proximite';
+
+export interface Company {
+  name: string;
+  sector: number | null; // index dans la liste des secteurs d'activité ONISEP
+  place: Place | null;
+  canKeep: 'oui' | 'peut-etre' | 'non';
+}
 
 export interface Profile {
   level: Level;
@@ -131,11 +172,21 @@ export interface Profile {
   apl: number;
   livingCosts: number;
   age: number;
+  // Situation actuelle
+  regime: Regime;
+  company: Company;
+  missions: string; // poste, missions en entreprise
+  subject: string; // sujet traité : mémoire, projet tutoré, missions
+  // Projet et avenir
+  projectText: string; // projet de formation, en quelques mots
+  metiers: number[]; // identifiants MET des métiers visés
+  sectors: number[]; // secteurs d'activité visés (index ONISEP)
+  goals: GoalId[];
 }
 
 export type CriterionId =
-  | 'interet' | 'format' | 'parcours' | 'admission' | 'matieres' | 'competences' | 'insertion'
-  | 'budget' | 'immobilier' | 'logement' | 'trajet' | 'energie' | 'carbone';
+  | 'interet' | 'format' | 'thematique' | 'entreprise' | 'parcours' | 'admission' | 'matieres' | 'competences'
+  | 'metiers' | 'insertion' | 'enjeux' | 'budget' | 'immobilier' | 'logement' | 'trajet' | 'energie' | 'carbone';
 
 export type Weights = Record<CriterionId, number>; // 0 à 5
 

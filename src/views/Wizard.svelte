@@ -2,19 +2,23 @@
   import Icon from '../components/Icon.svelte';
   import { LEVEL_LABELS } from '../lib/profile';
   import { app, router } from '../lib/state.svelte';
+  import StepAvenir from './wizard/StepAvenir.svelte';
   import StepBudget from './wizard/StepBudget.svelte';
   import StepMatieres from './wizard/StepMatieres.svelte';
   import StepParcours from './wizard/StepParcours.svelte';
   import StepPriorites from './wizard/StepPriorites.svelte';
   import StepProjet from './wizard/StepProjet.svelte';
+  import StepSituation from './wizard/StepSituation.svelte';
   import StepVie from './wizard/StepVie.svelte';
 
   let { step }: { step: number } = $props();
 
   const STEPS = [
     { title: 'Ton parcours', short: 'Parcours', icon: 'cap', intro: 'D’où tu pars : ton diplôme, ton niveau et ton classement.', Comp: StepParcours },
+    { title: 'Ta situation actuelle', short: 'Situation', icon: 'briefcase', intro: 'Formation initiale ou alternance, ton entreprise et le sujet sur lequel tu travailles.', Comp: StepSituation },
     { title: 'Matières et compétences', short: 'Matières', icon: 'book', intro: 'Tes points forts, pour estimer ton aisance dans chaque formation.', Comp: StepMatieres },
-    { title: 'Ton projet', short: 'Projet', icon: 'target', intro: 'Ce qui t’attire et le format d’études que tu souhaites.', Comp: StepProjet },
+    { title: 'Ton projet de formation', short: 'Projet', icon: 'sparkles', intro: 'Ce que tu veux apprendre, ce qui t’attire et le format d’études que tu souhaites.', Comp: StepProjet },
+    { title: 'Métiers et avenir', short: 'Métiers', icon: 'target', intro: 'Les secteurs et les métiers que tu vises, et ce qui compte pour toi plus tard.', Comp: StepAvenir },
     { title: 'Ta vie pratique', short: 'Vie pratique', icon: 'home', intro: 'Où tu vis, comment tu te déplaces et le rythme que tu peux tenir.', Comp: StepVie },
     { title: 'Ton budget', short: 'Budget', icon: 'wallet', intro: 'Tes ressources, pour vérifier que chaque option est finançable.', Comp: StepBudget },
     { title: 'Tes priorités', short: 'Priorités', icon: 'sliders', intro: 'Le poids de chaque critère dans ton taux de compatibilité.', Comp: StepPriorites }
@@ -22,7 +26,7 @@
 
   const current = $derived(Math.min(Math.max(1, Number.isFinite(step) ? step : 1), STEPS.length));
   const S = $derived(STEPS[current - 1]);
-  const missingHome = $derived(current === 4 && !app.profile.home);
+  const missingHome = $derived(current === 6 && !app.profile.home);
 
   function next() {
     if (current < STEPS.length) router.go(`/profil/${current + 1}`);

@@ -92,6 +92,9 @@ const RULES = [
   [/cyber|reseaux et tele|telecom/, ['info', 'elec']],
   [/intelligence artificielle|\bia\b|science des donnees|donnees|\bdata\b|statistique et informatique decisionnelle/, ['info', 'sciences']],
   [/informatique|informaticien|logiciel|developpeur|developpement (web|logiciel|informatique|d applications)|programmation|numerique|\bweb\b|jeux video|calcul haute|traitement automatique des langues/, ['info']],
+  [/logisti|transport|supply|mobilites?\b|douane|transit/, ['logist']],
+  [/tourisme|hotel|restauration (collective|rapide|commerciale)|hotellerie|gastronom|hospitality|cuisine|patisserie|boulangerie|sommelier|evenementiel|arts culinaires/, ['hotel']],
+  [/agri|agro|vigne|\bvins?\b|viticult|oenolog|forest|foret|animal|animaux|elevage|halieu|peche|horticult|aquacult|amenagements paysagers|productions vegetales|productions animales|alimentation|veterinaire|equin|canin/, ['agri']],
   [/electroni|electrotech|automati|robot|energie electrique|instrumentation|mesures physiques|signal|embarque|domotique/, ['elec']],
   [/mecani|aeronaut|aerospat|automobile|navale|naval|acoustique|thermique|energetique|moteur|maintenance des (vehicules|materiels)/, ['meca']],
   [/industri|procedes|materiaux|production|qualite|nanotech|plasturg|textile|agroalimentaire|metallurg|maintenance|methodes|chaudronn|fonderie|microtechni|packaging|emballage|\bbois\b/, ['indus']],
@@ -107,9 +110,6 @@ const RULES = [
   [/lettres|langue|litteratur|linguisti|traduction|interpretation|enseignement|meef|education|didactique|\bfle\b|humanites|creation litteraire|langage|llcer|\blea\b|professorat|inspe/, ['lettres']],
   [/communication|journalis|information (communication|documentation|et mediation)|information communication|sciences de l information|audiovisuel|cinema|medias|multimedia|edition|\blivre|documentation|bibliotheque|publicite|museo|evenementiel|graphique|imprim/, ['com']],
   [/\barts?\b|design|musique|musicolog|theatre|danse|spectacle|creation (artistique|numerique|litteraire|graphique)|\bmode\b|histoire de l art|conservation|restauration d|\bculture|culturel|metiers d art|dn made|artisanat|photograph|cirque|cinema d animation|animation (2d|3d|numerique)|jeu d acteur|joaillerie|ebenist|lutherie|ceramique|\bverre/, ['arts']],
-  [/tourisme|hotel|restauration|gastronom|hospitality|cuisine|patisserie|boulangerie|sommelier|evenementiel/, ['hotel']],
-  [/logisti|transport|supply|mobilites?\b|douane|transit/, ['logist']],
-  [/agri|agro|vigne|\bvins?\b|viticult|oenolog|forest|foret|animal|animaux|elevage|halieu|peche|horticult|aquacult|amenagements paysagers|productions vegetales|productions animales|alimentation|veterinaire|equin|canin/, ['agri']],
   [/defense|securite|police|gendarm|armee|militaire|surete|criminel|pompier|prevention/, ['armee']]
 ];
 

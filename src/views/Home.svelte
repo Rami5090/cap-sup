@@ -11,7 +11,7 @@
   const SOURCES = [
     { name: 'Mon Master 2025', what: 'capacités, candidatures et taux de proposition par parcours', by: 'Ministère de l’Enseignement supérieur' },
     { name: 'InserSup', what: 'emploi et salaires des diplômés', by: 'Ministère de l’Enseignement supérieur' },
-    { name: 'ONISEP', what: 'formations, établissements, coûts, hébergement', by: 'Idéo – open data ONISEP' },
+    { name: 'ONISEP', what: 'formations, métiers et secteurs, coûts, hébergement', by: 'Idéo – open data ONISEP' },
     { name: 'Parcoursup 2025', what: 'formations post-bac et profils des admis', by: 'Ministère de l’Enseignement supérieur' },
     { name: 'Carte des loyers 2025', what: 'loyers au m² par commune', by: 'ANIL / Ministère du Logement' },
     { name: 'Zonage ABC 2026', what: 'tension du marché du logement', by: 'Ministère du Logement' },
@@ -65,7 +65,7 @@
     <span class="n">1</span>
     <div>
       <h3>Ton profil</h3>
-      <p class="muted">Ton parcours, tes notes, tes compétences, ce qui te plaît. Compte environ 5 minutes.</p>
+      <p class="muted">Ton parcours, ta situation (alternance, entreprise), tes notes, les métiers qui t’attirent. Compte environ 5 minutes.</p>
     </div>
   </div>
   <div class="step">
