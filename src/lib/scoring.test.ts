@@ -6,6 +6,8 @@ import {
   admissionProbability, assess, combine, computeBudget, computeIdf, computeMobility, evaluate, lerp, mentionIndex, percentile,
   type ScoringContext
 } from './scoring';
+import { rankAll } from './ranking';
+import type { Filters } from './state.svelte';
 import type { Commune, Offer, Profile } from './types';
 
 const lille: Commune = {
@@ -215,5 +217,28 @@ describe('nouvelles variables : métiers, thématique, entreprise, enjeux', () =
     const p = profile({ goals: ['alternance'] });
     expect(assess(offer({ al: 1 }), p, jctx).scores.enjeux.score).toBe(100);
     expect(assess(offer({ al: 0 }), p, jctx).scores.enjeux.score).toBe(10);
+  });
+});
+
+describe('résultats : proximité avec le projet et le sujet', () => {
+  const filters = (minProjet = 0): Filters => ({
+    query: '', types: [], publicOnly: false, alternanceOnly: false, withinBudget: false, allDomains: true, minScore: 0, minProjet
+  });
+  const near = offer({ id: 'mm-NEAR', nm: 'Cybersécurité des réseaux', pc: 'Sécurité des systèmes industriels' });
+  const far = offer({ id: 'mm-FAR', nm: 'Informatique', pc: 'Génie logiciel' });
+  const assessed = (p: Profile) => [far, near].map((o) => assess(o, p, ctx, false));
+  const ids = (list: { a: { offer: Offer } }[]) => list.map((r) => r.a.offer.id);
+  const withProject = profile({ projectText: 'cybersécurité industrielle', subject: 'sécurité des réseaux' });
+
+  it('trie par proximité avec le projet', () => {
+    expect(ids(rankAll(assessed(withProject), DEFAULT_WEIGHTS, filters(), 'projet'))).toEqual(['mm-NEAR', 'mm-FAR']);
+  });
+
+  it('filtre les formations trop éloignées du projet', () => {
+    expect(ids(rankAll(assessed(withProject), DEFAULT_WEIGHTS, filters(50), 'score'))).toEqual(['mm-NEAR']);
+  });
+
+  it('sans projet ni sujet décrits, le filtre ne retire rien', () => {
+    expect(rankAll(assessed(profile()), DEFAULT_WEIGHTS, filters(50), 'projet')).toHaveLength(2);
   });
 });

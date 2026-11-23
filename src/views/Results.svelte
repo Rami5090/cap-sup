@@ -37,6 +37,7 @@
   const ranked = $derived(rankAll(assessed, weights, filters, sort));
   const visible = $derived(onlyFavorites ? ranked.filter((r) => app.favorites.includes(r.a.offer.id)) : ranked);
   const weightTotal = $derived(CRITERIA.reduce((s, c) => s + (weights[c.id] ?? 0), 0));
+  const hasProject = $derived(!!`${profile.projectText} ${profile.subject} ${profile.missions}`.trim());
   const hiddenByDomain = $derived(!filters.allDomains && focusDomains(profile, data.jobs ?? undefined).domains.size > 0);
 
   $effect(() => {
@@ -136,6 +137,10 @@
           </div>
 
           <Range label="Compatibilité minimale" min={0} max={90} step={5} bind:value={app.filters.minScore} format={(v) => (v ? `${v} %` : 'Aucune')} />
+          <Range label="Proximité minimale avec ton projet" min={0} max={90} step={5} bind:value={app.filters.minProjet} format={(v) => (v ? `${v} %` : 'Aucune')} />
+          {#if !hasProject}
+            <p class="small muted">Décris <a href="#/profil/4">ton projet</a> ou <a href="#/profil/2">ton sujet</a> pour trier et filtrer par proximité.</p>
+          {/if}
 
           <button class="btn btn-ghost btn-sm reset" onclick={() => (app.filters = defaultFilters())}><Icon name="refresh" size={16} /> Réinitialiser les filtres</button>
         </section>
@@ -196,7 +201,7 @@
         {/if}
         <ol class="cards">
           {#each visible.slice(0, shown) as item, i (item.a.offer.id)}
-            <li><OfferCard {item} rank={i + 1} onopen={(id) => (openId = id)} /></li>
+            <li><OfferCard {item} rank={i + 1} projet={sort === 'projet' || filters.minProjet > 0} onopen={(id) => (openId = id)} /></li>
           {/each}
         </ol>
         {#if shown < visible.length}

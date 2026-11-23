@@ -16,6 +16,7 @@
     "deploy": "node scripts/deploy-pages.mjs"
   },
   "dependencies": {
+    "firebase": "12.19.0",
     "leaflet": "1.9.4"
   },
   "devDependencies": {

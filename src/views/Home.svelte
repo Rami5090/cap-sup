@@ -104,7 +104,7 @@
       {/each}
     </ul>
     <div class="row foot">
-      <span class="small muted"><Icon name="lock" size={16} class="inline" /> Tes réponses restent dans ton navigateur : rien n’est envoyé à un serveur.</span>
+      <span class="small muted"><Icon name="lock" size={16} class="inline" /> Tes réponses restent dans ton navigateur ; si tu actives la sauvegarde en ligne, elles partent chiffrées.</span>
       <span class="spacer"></span>
       <a class="btn btn-ghost btn-sm" href="#/methode">Méthode et sources <Icon name="arrow" size={16} /></a>
     </div>

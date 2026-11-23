@@ -22,7 +22,12 @@ lui-même l’importance. Chaque note est expliquée et sourcée.
 - Carte des formations (fond Plan IGN) avec les résidences Crous.
 - Comparateur de 2 à 4 formations (graphique radar et tableau).
 - Page « Méthode et sources » : formule, hypothèses, limites.
-- Thème clair ou sombre, affichage mobile, navigation au clavier. Les réponses restent dans le navigateur.
+- Tri et filtre par **proximité avec ton projet et ton sujet** (mots en commun avec la formation).
+- **Sauvegarde en ligne chiffrée de bout en bout**, facultative : les réponses suivent l’étudiant d’un appareil à
+  l’autre, illisibles pour le serveur comme pour son administrateur (voir plus bas). Fichier de sauvegarde à exporter
+  ou importer.
+- Thème clair ou sombre, affichage mobile, navigation au clavier. Sans sauvegarde en ligne, les réponses restent dans
+  le navigateur.
 
 ## Les 17 critères
 
@@ -85,12 +90,47 @@ npm run deploy   # construit l’application et publie dist/ sur la branche gh-p
 
 Le site se met à jour en une à deux minutes. L’envoi utilise GitHub CLI s’il est connecté, sinon les identifiants Git habituels.
 
+## Sauvegarde en ligne chiffrée
+
+- **Chiffrement sur l’appareil** : la phrase secrète donne la clé (PBKDF2-SHA-256, 600 000 itérations, sel
+  aléatoire), les réponses sont chiffrées en AES-256-GCM avant de partir. Le serveur ne reçoit que
+  `{v, iter, salt, iv, ct, at}` ; la date `at` est liée au chiffré (une vieille version ne peut pas passer pour
+  récente). La phrase ne quitte jamais l’appareil ; la clé y est retenue pour synchroniser sans la redemander.
+- **Phrase oubliée** : la sauvegarde est perdue (c’est le principe) ; on peut repartir des réponses d’un appareil avec
+  une nouvelle phrase.
+- **Entre appareils** : la version la plus récente gagne ; au premier déverrouillage d’un appareil qui a déjà des
+  réponses, on choisit lesquelles garder.
+- **Où** : sur le site en ligne, dans **Firebase**, avec le compte du Cockpit de révision (même projet, même e-mail et
+  même mot de passe), document `capsup/<identifiant du compte>` ; dans **Unaa OS**, sur le serveur de la famille
+  (compte = le membre connecté).
+- **Mise en service Firebase** (une fois, console du projet `cockpit-revision-44fa9`, Firestore › Règles) : ajouter,
+  dans `match /databases/{database}/documents { … }`,
+
+  ```
+  match /capsup/{uid} {
+    allow read, write: if request.auth != null && request.auth.uid == uid;
+  }
+  ```
+
+- **Code** : `src/lib/vault.ts` (chiffrement), `cloud.svelte.ts` (synchronisation), `remote.ts` (Unaa OS),
+  `remote-firebase.ts` (Firebase, chargé seulement à l’usage), `components/CloudPanel.svelte` (fenêtre).
+  Le navigateur ne chiffre que sur une adresse sécurisée (https, ou localhost).
+
+## Dans Unaa OS
+
+Cap Sup est aussi un **module d’Unaa OS** (onglet 🎓 Cap Sup) : la même version construite, servie sous
+`/apps/capsup/`. Elle le reconnaît à son adresse : réponses propres à chaque membre de la famille, sauvegarde chiffrée
+sur le serveur familial. Mise à jour du module : `bash infra/build-capsup.sh` dans le dépôt Unaa OS, puis déploiement
+d’Unaa OS.
+
 ## Technologies
 
 - **Svelte 5 (runes) + Vite + TypeScript** : réactivité compilée, le classement de ~10 000 formations se recalcule en
   moins de 10 ms quand une pondération change ; application 100 % statique (~68 Ko gzip, hors carte).
 - **Leaflet** (chargé à la demande) avec les tuiles du Plan IGN.
-- **Vitest** pour les tests du moteur de compatibilité.
+- **Vitest** pour les tests du moteur de compatibilité et du chiffrement.
+- **Web Crypto** (chiffrement dans le navigateur) et **Firebase** (Authentication + Firestore Lite), chargé seulement
+  pour la sauvegarde en ligne du site.
 - Un **pipeline Node** (`scripts/`) qui télécharge, nettoie, géolocalise et croise les jeux de données.
 
 ## Structure

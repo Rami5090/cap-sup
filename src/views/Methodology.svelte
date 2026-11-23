@@ -171,8 +171,10 @@
   <section class="card card-flat privacy">
     <h2><Icon name="lock" size={20} /> Confidentialité</h2>
     <p class="small">
-      Tes réponses sont enregistrées uniquement dans ton navigateur (stockage local). L’application interroge seulement
-      deux services publics : l’API Découpage administratif (geo.api.gouv.fr) avec le texte que tu tapes pour chercher ta
+      Tes réponses sont enregistrées dans ton navigateur (stockage local). Si tu actives la sauvegarde en ligne, elles
+      sont d’abord chiffrées sur ton appareil (AES-256-GCM, clé tirée de ta phrase secrète par PBKDF2-SHA-256) : le
+      serveur (Firebase, ou celui d’Unaa OS) ne reçoit que du chiffré, illisible pour lui comme pour son administrateur.
+      Sans ta phrase secrète, personne ne peut récupérer la sauvegarde. L’application interroge par ailleurs deux services publics : l’API Découpage administratif (geo.api.gouv.fr) avec le texte que tu tapes pour chercher ta
       commune, et les tuiles du Plan IGN pour la carte.
     </p>
   </section>

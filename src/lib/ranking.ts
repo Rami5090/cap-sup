@@ -12,9 +12,10 @@ export interface Ranked {
   reliability: number;
 }
 
-export type SortKey = 'score' | 'distance' | 'budget' | 'insertion' | 'admission';
+export type SortKey = 'score' | 'projet' | 'distance' | 'budget' | 'insertion' | 'admission';
 export const SORT_LABELS: Record<SortKey, string> = {
   score: 'Compatibilité',
+  projet: 'Proximité avec ton projet',
   distance: 'Distance',
   budget: 'Budget restant',
   insertion: 'Insertion pro',
@@ -80,10 +81,13 @@ export function rankAll(assessed: Assessment[], w: Weights, f: Filters, sort: So
     const c = combine(a, w);
     if (c.total < f.minScore) continue;
     if (f.withinBudget && a.budget.balance < 0) continue;
+    const projet = a.scores.thematique.score; // null : projet et sujet pas encore décrits, le filtre ne s'applique pas
+    if (f.minProjet && projet != null && projet < f.minProjet) continue;
     out.push({ a, ...c });
   }
   const key: Record<SortKey, (r: Ranked) => number> = {
     score: (r) => -r.total,
+    projet: (r) => -(r.a.scores.thematique.score ?? -1),
     distance: (r) => (Number.isFinite(r.a.mobility.distanceKm) ? r.a.mobility.distanceKm : 1e9),
     budget: (r) => -r.a.budget.balance,
     insertion: (r) => -(r.a.offer.in?.[0] ?? -1),

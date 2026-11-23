@@ -11,9 +11,11 @@
   interface Props {
     item: Ranked;
     rank: number;
+    projet?: boolean; // afficher la proximité avec le projet (tri ou filtre par proximité)
     onopen: (id: string) => void;
   }
-  let { item, rank, onopen }: Props = $props();
+  let { item, rank, projet = false, onopen }: Props = $props();
+  const proximity = $derived(item.a.scores.thematique.score);
 
   const o = $derived(item.a.offer);
   const m = $derived(item.a.mobility);
@@ -45,6 +47,9 @@
 
   <div class="main">
     <div class="row top">
+      {#if projet && proximity != null}
+        <span class="badge badge-{scoreTone(proximity)}" title="Mots en commun entre ton projet, ton sujet et la formation">Proximité avec ton projet : {proximity} %</span>
+      {/if}
       <span class="badge badge-brand">{TYPES[o.ty].short}</span>
       {#if (o.al ?? 0) >= 1}<span class="badge badge-accent">{o.al === 2 ? 'En alternance' : 'Alternance possible'}</span>{/if}
       <span class="badge">{STATUT_LABELS[o.st ?? 0]}</span>

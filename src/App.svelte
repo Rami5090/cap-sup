@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CloudPanel from './components/CloudPanel.svelte';
   import Icon from './components/Icon.svelte';
   import { app, router } from './lib/state.svelte';
   import Compare from './views/Compare.svelte';
@@ -53,6 +54,7 @@
       </a>
       <a href="#/methode" aria-current={route.name === 'methode' ? 'page' : undefined} onclick={() => (menu = false)}><Icon name="info" size={18} /> Méthode et sources</a>
     </nav>
+    <span class="cloud"><CloudPanel /></span>
     <button class="btn btn-ghost btn-icon theme" onclick={cycleTheme} aria-label={isDark ? 'Passer en thème clair' : 'Passer en thème sombre'} title="Thème">
       <Icon name={isDark ? 'sun' : 'moon'} />
     </button>
@@ -186,6 +188,9 @@
     }
     .theme {
       order: 1;
+    }
+    .cloud {
+      order: 0;
     }
     nav {
       display: none;
